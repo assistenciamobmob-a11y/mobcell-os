@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobcell • Consulta de OS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Space+Grotesk:wght@600;700&display=swap');
+  :root{ --teal:#14C9AE; --ink:#1B1D22; --paper:#F5F7F7; --card:#fff; --line:#E4E7E7; }
+  *{box-sizing:border-box;} body{font-family:'Manrope',sans-serif; background:var(--paper); color:var(--ink); margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .box{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:32px; width:100%; max-width:480px; box-shadow:0 8px 30px -10px rgba(20,25,25,.12);}
+  .brand{text-align:center; margin-bottom:24px;} .brand h1{font-family:'Space Grotesk'; font-size:24px; margin:0;} .brand span{color:var(--teal);} .brand p{font-size:13px; color:#4A4E58; margin:6px 0 0;}
+  input{width:100%; padding:14px 16px; border:1px solid var(--line); border-radius:12px; font-size:15px; margin-bottom:12px; font-family:inherit;}
+  input:focus{outline:none; border-color:var(--teal);}
+  button{width:100%; padding:14px; border:none; border-radius:12px; background:var(--teal); color:#08201C; font-weight:800; font-size:15px; cursor:pointer; font-family:inherit;}
+  button:disabled{opacity:.5; cursor:not-allowed;}
+  .result{margin-top:20px; display:none;}
+  .os-card{border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:12px;}
+  .os-card h3{margin:0 0 4px; font-family:'Space Grotesk'; font-size:16px;}
+  .os-card .status{display:inline-block; padding:4px 12px; border-radius:100px; font-size:12px; font-weight:700; margin-bottom:8px;}
+  .s-aberta{background:#EDEEF6; color:#5A5FBB;} .s-andamento{background:#FFF3E0; color:#B8791E;} .s-pecas{background:#FDEAEA; color:#C34C4C;} .s-pronto{background:#E4FBF7; color:#0FA893;} .s-entregue{background:#EAF6EE; color:#2E9D5E;}
+  .os-row{display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid #f0f0f0;}
+  .os-row:last-child{border-bottom:none;} .os-row span{color:#4A4E58;} .os-row b{font-weight:700;}
+  .empty{text-align:center; color:#4A4E58; font-size:14px; padding:20px;}
+  .footer{text-align:center; font-size:11px; color:#8B8F98; margin-top:20px;}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="brand">
+    <h1><span>MOB</span>CELL</h1>
+    <p>Consulte o status da sua ordem de serviço</p>
+  </div>
+  <input type="text" id="cpf" placeholder="Digite o CPF do cliente" maxlength="14">
+  <button onclick="buscar()" id="btnBuscar">Buscar ordem de serviço</button>
+  <div id="resultado" class="result"></div>
+  <div class="footer">Mobcell & Tcase • 12 filiais</div>
+</div>
+
+<script>
+// ⬇️ COLE AQUI A MESMA URL DO APPS SCRIPT
+const API_URL = 'https://script.google.com/macros/s/AKfycbzJJCVjpB1p_BU33z-yz7j4WzA81_qhOq_TmuauBZVF6GE5dKo3KOqWgmbajDX6pXU4/exec';
+
+function fmtCPF(v){ v=v.replace(/\D/g,'').slice(0,11); return v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); }
+document.getElementById('cpf').addEventListener('input', e=> e.target.value = fmtCPF(e.target.value));
+
+const STATUS_MAP = {
+  "Aberta":"s-aberta","Em Andamento":"s-andamento","Aguardando Peça":"s-pecas",
+  "Pronto para Retirada":"s-pronto","Entregue":"s-entregue"
+};
+
+async function buscar(){
+  const btn = document.getElementById('btnBuscar'); const res = document.getElementById('resultado');
+  const cpf = document.getElementById('cpf').value.trim();
+  if(cpf.length < 11){ res.innerHTML='<div class="empty">Digite um CPF válido.</div>'; res.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Buscando...';
+  try{
+    const r = await fetch(API_URL + '?acao=ordens'); const ordens = await r.json();
+    const encontradas = ordens.filter(o => o.cpf === cpf).sort((a,b)=> new Date(b.criadaEm) - new Date(a.criadaEm));
+
+    if(encontradas.length === 0){
+      res.innerHTML = '<div class="empty">Nenhuma ordem encontrada para este CPF.</div>';
+    } else {
+      res.innerHTML = encontradas.map(o => {
+        const prev = o.previsao ? new Date(o.previsao+'T00:00').toLocaleDateString('pt-BR') : '—';
+        return `<div class="os-card">
+          <h3>${o.numero}</h3>
+          <span class="status ${STATUS_MAP[o.status]||''}">${o.status}</span>
+          <div class="os-row"><span>Cliente</span><b>${o.clienteNome}</b></div>
+          <div class="os-row"><span>Produto</span><b>${o.marca} ${o.modelo}</b></div>
+          <div class="os-row"><span>Filial</span><b>${o.filial}</b></div>
+          <div class="os-row"><span>Previsão</span><b>${prev}</b></div>
+          <div class="os-row"><span>Aberta em</span><b>${new Date(o.criadaEm).toLocaleDateString('pt-BR')}</b></div>
+        </div>`;
+      }).join('');
+    }
+    res.style.display = 'block';
+  }catch(e){
+    res.innerHTML = '<div class="empty">Erro ao buscar. Verifique sua conexão.</div>'; res.style.display='block';
+  }finally{ btn.disabled=false; btn.textContent='Buscar ordem de serviço'; }
+}
+</script>
+</body>
+</html>
