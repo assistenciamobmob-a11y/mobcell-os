@@ -56,14 +56,11 @@
   .timeline .t-status{font-weight:700;font-size:13.5px;} .timeline .t-date{font-size:11.5px;color:var(--ink-soft);}
   .status-actions{display:flex;flex-wrap:wrap;gap:8px;}
   .callout{border-radius:12px;padding:16px;background:var(--teal-light);border:1px solid #BDEFE6;font-size:13.5px;} .callout.warn{background:#FFF6E7;border-color:#F5DFAF;} .callout h4{margin:0 0 6px;font-size:13.5px;}
-  .modal-bg{position:fixed;inset:0;background:rgba(20,22,25,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
-  .modal{background:#fff;border-radius:16px;max-width:440px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25);} .modal h3{margin:0 0 10px;} .modal p{color:var(--ink-soft);font-size:14px;line-height:1.5;} .modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
   .toast{position:fixed;bottom:22px;right:22px;background:var(--ink);color:#fff;padding:13px 18px;border-radius:11px;font-size:13.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:80;display:flex;align-items:center;gap:10px;animation:toastin .2s ease;}
   @keyframes toastin{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
   .manager-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
   .manager-card{border:1px solid var(--line);border-radius:12px;padding:16px;} .manager-card .fname{font-weight:800;font-size:14.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
   .tag-tcase{background:#EFF4D9;color:#6E7A1E;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:800;}
-  .icon-btn{background:none;border:none;color:var(--ink-soft);padding:6px;border-radius:8px;display:inline-flex;} .icon-btn:hover{background:var(--paper);color:var(--ink);}
   .login-screen{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:100;}
   .login-box{background:#fff;padding:32px;border-radius:16px;box-shadow:var(--shadow);width:320px;text-align:center;}
   .login-box input{width:100%;margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:14px;}
@@ -111,14 +108,12 @@
 </div>
 
 <div id="laudoView"></div>
-<div id="modalRoot"></div>
 <div id="toastRoot"></div>
 
 <script>
 /* ============== CONFIGURAÇÃO ============== */
-// ⬇️ COLE AQUI A URL DO SEU APPS SCRIPT (veja o passo 4 do tutorial)
 const API_URL = 'https://script.google.com/macros/s/AKfycbztdV-jQP_lX5GC0MoY4YaSKR37IDX2XVHYeL1GxBdikbsrJdG2xNkO24C04dr5KRo/exec';
-const SENHA_ADMIN = 'mobmob123'; // 🔒 MUDE ESTA SENHA
+const SENHA_ADMIN = 'mobmob123';
 
 /* ============== DADOS ============== */
 const FILIAIS = ["Araruama","Bacaxá","Bacaxá Praça","Cabo Frio","Maricá","São Pedro","Rio Das Ostras","Unamar","Campos Centro","Campos Shopping","Tcase Pelinca","Tcase Boulevard"];
@@ -131,23 +126,26 @@ let currentView = 'dashboard', currentOsId = null, dashFilters = {filial:'', sta
 
 /* ============== UTILITÁRIOS ============== */
 function uid(){ return Math.random().toString(36).slice(2,9)+Math.random().toString(36).slice(2,5); }
-function fmtDate(iso){ if(!iso) return "—"; const d=new Date(iso); return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})+" "+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+function fmtDate(iso){ if(!iso) return "—"; try{ const d=new Date(iso); if(isNaN(d.getTime())) return "—"; return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})+" "+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return "—"; } }
 function fmtCPF(v){ v=(v||"").replace(/\D/g,'').slice(0,11); return v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); }
 function fmtPhone(v){ v=(v||"").replace(/\D/g,'').slice(0,11); if(v.length<=10) return v.replace(/(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3').trim(); return v.replace(/(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3').trim(); }
+function fmtPrevisao(v){ if(!v) return "—"; try{ const d=new Date(v); if(isNaN(d.getTime())) return "—"; return d.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric"}); }catch(e){ return "—"; } }
 function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 function showToast(msg, isError){ const root=document.getElementById('toastRoot'); const el=document.createElement('div'); el.className='toast'; el.style.background=isError?'#E5566B':'#1B1D22'; el.textContent=msg; root.appendChild(el); setTimeout(()=>el.remove(),3200); }
-function nextOsNumber(){ const y=new Date().getFullYear(); const c=STATE.ordens.filter(o=>o.numero && o.numero.includes(`-${y}-`)).length+1; return `OS-${y}-${String(c).padStart(4,'0')}`; }
+function nextOsNumber(){ const y=new Date().getFullYear(); const c=STATE.ordens.filter(o=>o.numero && String(o.numero).includes(`-${y}-`)).length+1; return `OS-${y}-${String(c).padStart(4,'0')}`; }
+function safeStr(v){ return v===undefined || v===null ? '' : String(v); }
+function safeBadge(status){ return STATUS_CLASS[status] || 'b-aberta'; }
 
 /* ============== API ============== */
 async function apiGet(acao){ const r=await fetch(`${API_URL}?acao=${acao}`); return r.json(); }
 async function apiPost(tipo, payload){ const r=await fetch(API_URL,{method:'POST',body:JSON.stringify({tipo,...payload})}); return r.json(); }
 
 async function loadData(){
-  try{ STATE.ordens = await apiGet('ordens'); }catch(e){ showToast('Erro ao carregar ordens',true); STATE.ordens=[]; }
-  try{ STATE.gerentes = await apiGet('gerentes'); }catch(e){ showToast('Erro ao carregar gerentes',true); STATE.gerentes={}; }
+  try{ STATE.ordens = await apiGet('ordens'); if(!Array.isArray(STATE.ordens)) STATE.ordens=[]; }catch(e){ console.error('load ordens',e); STATE.ordens=[]; }
+  try{ STATE.gerentes = await apiGet('gerentes'); if(!STATE.gerentes || typeof STATE.gerentes!=='object') STATE.gerentes={}; }catch(e){ console.error('load gerentes',e); STATE.gerentes={}; }
 }
-async function saveOrdens(){ try{ await apiPost('salvarOrdens',{ordens:STATE.ordens}); showToast('Dados salvos com sucesso'); }catch(e){ showToast('Erro ao salvar ordens',true); } }
-async function saveGerentes(){ try{ await apiPost('salvarGerentes',{gerentes:STATE.gerentes}); showToast('Contatos salvos'); }catch(e){ showToast('Erro ao salvar gerentes',true); } }
+async function saveOrdens(){ try{ await apiPost('salvarOrdens',{ordens:STATE.ordens}); showToast('Dados salvos com sucesso'); }catch(e){ console.error('save ordens',e); showToast('Erro ao salvar ordens',true); } }
+async function saveGerentes(){ try{ await apiPost('salvarGerentes',{gerentes:STATE.gerentes}); showToast('Contatos salvos'); }catch(e){ console.error('save gerentes',e); showToast('Erro ao salvar gerentes',true); } }
 
 /* ============== LOGIN ============== */
 function fazerLogin(){ if(document.getElementById('senhaInput').value===SENHA_ADMIN){ document.getElementById('loginScreen').style.display='none'; document.getElementById('app').style.display='flex'; initApp(); } else { document.getElementById('loginErro').style.display='block'; } }
@@ -170,21 +168,35 @@ function renderNav(){
 }
 
 /* ============== RENDER PRINCIPAL ============== */
-function render(){ renderNav(); const root=document.getElementById('viewRoot'); if(currentView==='dashboard') root.innerHTML=viewDashboard(); else if(currentView==='nova') root.innerHTML=viewNovaOS(); else if(currentView==='detalhe') root.innerHTML=viewDetalhe(currentOsId); else if(currentView==='gerentes') root.innerHTML=viewGerentes(); attachHandlers(); }
+function render(){ renderNav(); const root=document.getElementById('viewRoot'); try{ if(currentView==='dashboard') root.innerHTML=viewDashboard(); else if(currentView==='nova') root.innerHTML=viewNovaOS(); else if(currentView==='detalhe') root.innerHTML=viewDetalhe(currentOsId); else if(currentView==='gerentes') root.innerHTML=viewGerentes(); attachHandlers(); }catch(e){ console.error('render error',e); root.innerHTML='<div class="empty">Erro ao carregar. Verifique o console (F12).</div>'; } }
 
 /* ============== DASHBOARD ============== */
 function viewDashboard(){
-  const total=STATE.ordens.length; const abertas=STATE.ordens.filter(o=>o.status!=='Entregue').length; const prontas=STATE.ordens.filter(o=>o.status==='Pronto para Retirada').length;
-  const entreguesHoje=STATE.ordens.filter(o=>{ if(o.status!=='Entregue'||!o.entregueEm) return false; const d=new Date(o.entregueEm), t=new Date(); return d.toDateString()===t.toDateString(); }).length;
-  let list=STATE.ordens.slice().sort((a,b)=>new Date(b.criadaEm)-new Date(a.criadaEm));
-  if(dashFilters.filial) list=list.filter(o=>o.filial===dashFilters.filial);
-  if(dashFilters.status) list=list.filter(o=>o.status===dashFilters.status);
-  if(dashFilters.q){ const q=dashFilters.q.toLowerCase(); list=list.filter(o=>(o.numero||'').toLowerCase().includes(q)||(o.clienteNome||'').toLowerCase().includes(q)||(o.cpf||'').includes(q)); }
-  const rows=list.map(o=>`<tr class="row-click" data-open="${o.id}"><td class="mono">${o.numero}</td><td>${escapeHtml(o.clienteNome)}</td><td>${escapeHtml(o.marca||'')} ${escapeHtml(o.modelo||'')}</td><td>${escapeHtml(o.filial)}</td><td><span class="badge ${STATUS_CLASS[o.status]}">${o.status}</span></td><td>${fmtDate(o.criadaEm)}</td></tr>`).join('');
-  return `<div class="topbar"><div><h1>Ordens de Serviço</h1><p>Painel geral das 12 filiais</p></div><button class="btn btn-primary" data-nav="nova"><svg width="15" height="15" viewBox="0 0 24 24" fill="none">${ICONS.plus}</svg>Nova OS</button></div>
-  <div class="stats"><div class="stat accent"><div class="num">${total}</div><div class="lbl">Total de ordens</div></div><div class="stat"><div class="num">${abertas}</div><div class="lbl">Em aberto</div></div><div class="stat"><div class="num">${prontas}</div><div class="lbl">Prontas p/ retirada</div></div><div class="stat"><div class="num">${entreguesHoje}</div><div class="lbl">Entregues hoje</div></div></div>
-  <div class="card pad"><div class="filters"><input type="text" id="fq" placeholder="Buscar por nº, cliente ou CPF..." value="${escapeHtml(dashFilters.q)}"><select id="fFilial"><option value="">Todas as filiais</option>${FILIAIS.map(f=>`<option value="${f}" ${dashFilters.filial===f?'selected':''}>${f}</option>`).join('')}</select><select id="fStatus"><option value="">Todos os status</option>${STATUSES.map(s=>`<option value="${s}" ${dashFilters.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
-  ${list.length?`<div style="overflow-x:auto;"><table><thead><tr><th>Nº OS</th><th>Cliente</th><th>Produto</th><th>Filial</th><th>Status</th><th>Aberta em</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none">${ICONS.list}</svg><div><b>Nenhuma ordem encontrada.</b><br>Ajuste os filtros ou cadastre uma nova OS.</div></div>`}</div>`;
+  try{
+    const total=STATE.ordens.length;
+    const abertas=STATE.ordens.filter(o=>o && o.status!=='Entregue').length;
+    const prontas=STATE.ordens.filter(o=>o && o.status==='Pronto para Retirada').length;
+    const entreguesHoje=STATE.ordens.filter(o=>{ if(!o || o.status!=='Entregue'||!o.entregueEm) return false; try{ const d=new Date(o.entregueEm), t=new Date(); return d.toDateString()===t.toDateString(); }catch(e){ return false; } }).length;
+    let list=STATE.ordens.slice().filter(o=>o && o.criadaEm).sort((a,b)=>{ try{ return new Date(b.criadaEm)-new Date(a.criadaEm); }catch(e){ return 0; } });
+    if(dashFilters.filial) list=list.filter(o=>o && o.filial===dashFilters.filial);
+    if(dashFilters.status) list=list.filter(o=>o && o.status===dashFilters.status);
+    if(dashFilters.q){ const q=dashFilters.q.toLowerCase(); list=list.filter(o=>o && ((safeStr(o.numero).toLowerCase().includes(q))||(safeStr(o.clienteNome).toLowerCase().includes(q))||(safeStr(o.cpf).includes(q)))); }
+    const rows=list.map(o=>{
+      const numero = safeStr(o.numero) || '—';
+      const nome = safeStr(o.clienteNome);
+      const marca = safeStr(o.marca);
+      const modelo = safeStr(o.modelo);
+      const filial = safeStr(o.filial);
+      const status = safeStr(o.status) || 'Aberta';
+      const criada = fmtDate(o.criadaEm);
+      const id = safeStr(o.id);
+      return `<tr class="row-click" data-open="${escapeHtml(id)}"><td class="mono">${escapeHtml(numero)}</td><td>${escapeHtml(nome)}</td><td>${escapeHtml(marca)} ${escapeHtml(modelo)}</td><td>${escapeHtml(filial)}</td><td><span class="badge ${safeBadge(status)}">${escapeHtml(status)}</span></td><td>${criada}</td></tr>`;
+    }).join('');
+    return `<div class="topbar"><div><h1>Ordens de Serviço</h1><p>Painel geral das 12 filiais</p></div><button class="btn btn-primary" data-nav="nova"><svg width="15" height="15" viewBox="0 0 24 24" fill="none">${ICONS.plus}</svg>Nova OS</button></div>
+    <div class="stats"><div class="stat accent"><div class="num">${total}</div><div class="lbl">Total de ordens</div></div><div class="stat"><div class="num">${abertas}</div><div class="lbl">Em aberto</div></div><div class="stat"><div class="num">${prontas}</div><div class="lbl">Prontas p/ retirada</div></div><div class="stat"><div class="num">${entreguesHoje}</div><div class="lbl">Entregues hoje</div></div></div>
+    <div class="card pad"><div class="filters"><input type="text" id="fq" placeholder="Buscar por nº, cliente ou CPF..." value="${escapeHtml(dashFilters.q)}"><select id="fFilial"><option value="">Todas as filiais</option>${FILIAIS.map(f=>`<option value="${f}" ${dashFilters.filial===f?'selected':''}>${f}</option>`).join('')}</select><select id="fStatus"><option value="">Todos os status</option>${STATUSES.map(s=>`<option value="${s}" ${dashFilters.status===s?'selected':''}>${s}</option>`).join('')}</select><button class="btn btn-primary btn-sm" id="btnBuscarDash">Buscar</button></div>
+    ${list.length?`<div style="overflow-x:auto;"><table><thead><tr><th>Nº OS</th><th>Cliente</th><th>Produto</th><th>Filial</th><th>Status</th><th>Aberta em</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none">${ICONS.list}</svg><div><b>Nenhuma ordem encontrada.</b><br>Ajuste os filtros ou cadastre uma nova OS.</div></div>`}</div>`;
+  }catch(e){ console.error('dashboard error',e); return '<div class="empty">Erro ao carregar dashboard. Verifique o console (F12).</div>'; }
 }
 
 /* ============== NOVA OS ============== */
@@ -192,9 +204,9 @@ function viewNovaOS(){
   return `<div class="topbar"><div><h1>Nova Ordem de Serviço</h1><p>Preencha os dados do cliente e do aparelho</p></div><button class="btn btn-ghost" data-nav="dashboard">Cancelar</button></div>
   <div class="card pad"><form id="formNovaOS">
   <div class="section-title">Filial</div><div class="form-grid"><div class="field span2"><label>Filial responsável *</label><select name="filial" required><option value="">Selecione a filial</option>${FILIAIS.map(f=>`<option value="${f}">${f}</option>`).join('')}</select></div></div>
-  <div class="section-title">Cliente</div><div class="form-grid"><div class="field"><label>Nome completo *</label><input name="clienteNome" required placeholder="Nome do cliente"></div><div class="field"><label>CPF *</label><input name="cpf" required placeholder="000.000.000-00" maxlength="14"></div><div class="field"><label>Telefone *</label><input name="telefone" required placeholder="(00) 00000-0000" maxlength="15"></div><div class="field"><label>E-mail</label><input name="email" type="email" placeholder="opcional"></div></div>
-  <div class="section-title">Produto</div><div class="form-grid"><div class="field"><label>Tipo de produto *</label><input name="tipoProduto" ></div><div class="field"><label>Marca *</label><input name="marca" ></div><div class="field"><label>Modelo *</label><input name="modelo"></div><div class="field"><label>IMEI / Nº de série</label><input name="imei" placeholder="opcional"></div><div class="field span2"><label>Acessórios entregues junto</label><input name="acessorios" placeholder="Ex: capinha, carregador, fone"></div></div>
-  <div class="section-title">Serviço</div><div class="form-grid"><div class="field span2"><label>Defeito relatado pelo cliente *</label><textarea name="defeito" required placeholder="Descreva o problema informado pelo cliente"></textarea></div><div class="field"><label>Técnico responsável</label><input name="tecnico" placeholder="Nome do técnico"></div><div class="field"><label>Previsão de entrega</label><input name="previsao" type="date"></div><div class="field"><label>Valor orçado (R$)</label><input name="valor" type="number" step="0.01" placeholder="0,00"></div><div class="field"><label>Garantia do serviço (dias)</label><input name="garantia" type="number" value="90"></div></div>
+  <div class="section-title">Cliente</div><div class="form-grid"><div class="field"><label>Nome completo *</label><input name="clienteNome" required></div><div class="field"><label>CPF *</label><input name="cpf" required maxlength="14"></div><div class="field"><label>Telefone *</label><input name="telefone" required maxlength="15"></div><div class="field"><label>E-mail</label><input name="email" type="email"></div></div>
+  <div class="section-title">Produto</div><div class="form-grid"><div class="field"><label>Tipo de produto *</label><input name="tipoProduto" required placeholder="Ex: Smartphone, Overboard, Triciclo, Notebook..."></div><div class="field"><label>Marca *</label><input name="marca" required></div><div class="field"><label>Modelo *</label><input name="modelo" required></div><div class="field"><label>IMEI / Série</label><input name="imei"></div><div class="field span2"><label>Acessórios entregues</label><input name="acessorios" placeholder="Ex: capinha, carregador"></div></div>
+  <div class="section-title">Serviço</div><div class="form-grid"><div class="field span2"><label>Defeito relatado *</label><textarea name="defeito" required></textarea></div><div class="field"><label>Técnico</label><input name="tecnico"></div><div class="field"><label>Previsão de entrega</label><input name="previsao" type="date"></div><div class="field"><label>Valor orçado (R$)</label><input name="valor" type="number" step="0.01"></div><div class="field"><label>Garantia (dias)</label><input name="garantia" type="number" value="90"></div></div>
   <hr class="sep"><div style="display:flex;justify-content:flex-end;gap:10px;"><button type="button" class="btn btn-ghost" data-nav="dashboard">Cancelar</button><button type="submit" class="btn btn-primary">Cadastrar ordem de serviço</button></div></form></div>`;
 }
 async function handleNovaOSSubmit(e){
@@ -205,33 +217,33 @@ async function handleNovaOSSubmit(e){
 
 /* ============== DETALHE ============== */
 function viewDetalhe(id){
-  const o=STATE.ordens.find(x=>x.id===id); if(!o) return `<div class="empty">Ordem não encontrada. <button class="btn btn-ghost" data-nav="dashboard">Voltar</button></div>`;
+  const o=STATE.ordens.find(x=>x && x.id===id); if(!o) return `<div class="empty">Ordem não encontrada. <button class="btn btn-ghost" data-nav="dashboard">Voltar</button></div>`;
   const gerente=STATE.gerentes[o.filial]||{};
-  const tl=o.historico.slice().reverse().map(h=>`<li><div class="t-status">${h.status}</div><div class="t-date">${fmtDate(h.em)}</div></li>`).join('');
+  const tl=(Array.isArray(o.historico)?o.historico:[]).slice().reverse().map(h=>`<li><div class="t-status">${escapeHtml(safeStr(h.status))}</div><div class="t-date">${fmtDate(h.em)}</div></li>`).join('');
   const statusBtns=STATUSES.map(s=>`<button class="btn btn-sm ${s===o.status?'btn-dark':'btn-ghost'}" data-setstatus="${s}" ${s===o.status?'disabled':''}>${s}</button>`).join('');
   let notifyBlock='';
   if(o.status==='Pronto para Retirada'){
-    if(gerente.telefone){ const msg=encodeURIComponent(`Olá ${gerente.nome||''}, a OS ${o.numero} (${o.clienteNome} - ${o.marca} ${o.modelo}) está PRONTA para retirada na filial ${o.filial}.`); const wa=`https://wa.me/55${gerente.telefone.replace(/\D/g,'')}?text=${msg}`; notifyBlock=`<div class="callout"><h4>Aparelho pronto — avisar gerente</h4><p style="margin:0 0 10px;">Gerente da filial: <b>${escapeHtml(gerente.nome)}</b> · ${fmtPhone(gerente.telefone)}</p><a class="btn btn-primary btn-sm" href="${wa}" target="_blank" rel="noopener" style="text-decoration:none;">Avisar via WhatsApp</a></div>`; }
-    else { notifyBlock=`<div class="callout warn"><h4>Nenhum gerente cadastrado para ${escapeHtml(o.filial)}</h4><p style="margin:0 0 10px;">Cadastre o contato do gerente para poder enviar o aviso de "pronto".</p><button class="btn btn-sm btn-ghost" data-nav="gerentes">Cadastrar gerente</button></div>`; }
+    if(gerente.telefone){ const msg=encodeURIComponent(`Olá ${safeStr(gerente.nome)}, a OS ${safeStr(o.numero)} (${safeStr(o.clienteNome)} - ${safeStr(o.marca)} ${safeStr(o.modelo)}) está PRONTA para retirada na filial ${safeStr(o.filial)}.`); const wa=`https://wa.me/55${safeStr(gerente.telefone).replace(/\D/g,'')}?text=${msg}`; notifyBlock=`<div class="callout"><h4>Aparelho pronto — avisar gerente</h4><p style="margin:0 0 10px;">Gerente da filial: <b>${escapeHtml(safeStr(gerente.nome))}</b> · ${fmtPhone(safeStr(gerente.telefone))}</p><a class="btn btn-primary btn-sm" href="${wa}" target="_blank" rel="noopener" style="text-decoration:none;">Avisar via WhatsApp</a></div>`; }
+    else { notifyBlock=`<div class="callout warn"><h4>Nenhum gerente cadastrado para ${escapeHtml(safeStr(o.filial))}</h4><p style="margin:0 0 10px;">Cadastre o contato do gerente para poder enviar o aviso de "pronto".</p><button class="btn btn-sm btn-ghost" data-nav="gerentes">Cadastrar gerente</button></div>`; }
   }
-  return `<div class="topbar"><div><h1 class="mono">${o.numero}</h1><p>${escapeHtml(o.filial)} · Aberta em ${fmtDate(o.criadaEm)}</p></div><div style="display:flex;gap:10px;"><button class="btn btn-ghost" data-nav="dashboard">← Voltar</button><button class="btn btn-dark" data-laudo="${o.id}">Emitir laudo</button></div></div>
-  <div class="detail-grid"><div style="display:flex;flex-direction:column;gap:16px;"><div class="card pad"><div class="detail-head"><span class="badge ${STATUS_CLASS[o.status]}" style="font-size:13px;padding:6px 13px;">${o.status}</span></div>
-  <div class="section-title" style="margin-top:0;">Cliente</div><dl class="kv"><dt>Nome</dt><dd>${escapeHtml(o.clienteNome)}</dd><dt>CPF</dt><dd>${escapeHtml(o.cpf)}</dd><dt>Telefone</dt><dd>${escapeHtml(o.telefone)}</dd><dt>E-mail</dt><dd>${escapeHtml(o.email)||'—'}</dd></dl>
-  <div class="section-title">Produto</div><dl class="kv"><dt>Tipo</dt><dd>${escapeHtml(o.tipoProduto)}</dd><dt>Marca / Modelo</dt><dd>${escapeHtml(o.marca)} ${escapeHtml(o.modelo)}</dd><dt>IMEI / Série</dt><dd>${escapeHtml(o.imei)||'—'}</dd><dt>Acessórios</dt><dd>${escapeHtml(o.acessorios)||'—'}</dd></dl>
-  <div class="section-title">Serviço</div><dl class="kv"><dt>Defeito relatado</dt><dd>${escapeHtml(o.defeito)}</dd><dt>Técnico</dt><dd>${escapeHtml(o.tecnico)||'—'}</dd><dt>Previsão</dt><dd>${o.previsao?new Date(o.previsao).toLocaleDateString('pt-BR'):'—'}</dd><dt>Valor</dt><dd>${o.valor?'R$ '+Number(o.valor).toFixed(2):'—'}</dd><dt>Garantia</dt><dd>${o.garantia||'90'} dias</dd></dl>
-  <div class="section-title">Diagnóstico técnico (usado no laudo)</div><div class="form-grid full"><div class="field"><textarea id="diagnostico" placeholder="Diagnóstico técnico do defeito">${escapeHtml(o.diagnostico)}</textarea></div><div class="field"><label>Serviço realizado</label><textarea id="servicoRealizado" placeholder="O que foi feito no aparelho">${escapeHtml(o.servicoRealizado)}</textarea></div><div class="field"><label>Peças utilizadas</label><textarea id="pecasUtilizadas" placeholder="Peças / componentes trocados">${escapeHtml(o.pecasUtilizadas)}</textarea></div></div><div style="display:flex;justify-content:flex-end;margin-top:10px;"><button class="btn btn-sm btn-primary" data-savetech="${o.id}">Salvar diagnóstico</button></div></div></div>
+  return `<div class="topbar"><div><h1 class="mono">${escapeHtml(safeStr(o.numero))}</h1><p>${escapeHtml(safeStr(o.filial))} · Aberta em ${fmtDate(o.criadaEm)}</p></div><div style="display:flex;gap:10px;"><button class="btn btn-ghost" data-nav="dashboard">← Voltar</button><button class="btn btn-dark" data-laudo="${escapeHtml(safeStr(o.id))}">Emitir laudo</button></div></div>
+  <div class="detail-grid"><div style="display:flex;flex-direction:column;gap:16px;"><div class="card pad"><div class="detail-head"><span class="badge ${safeBadge(o.status)}" style="font-size:13px;padding:6px 13px;">${escapeHtml(safeStr(o.status))}</span></div>
+  <div class="section-title" style="margin-top:0;">Cliente</div><dl class="kv"><dt>Nome</dt><dd>${escapeHtml(safeStr(o.clienteNome))}</dd><dt>CPF</dt><dd>${escapeHtml(safeStr(o.cpf))}</dd><dt>Telefone</dt><dd>${escapeHtml(safeStr(o.telefone))}</dd><dt>E-mail</dt><dd>${escapeHtml(safeStr(o.email))||'—'}</dd></dl>
+  <div class="section-title">Produto</div><dl class="kv"><dt>Tipo</dt><dd>${escapeHtml(safeStr(o.tipoProduto))}</dd><dt>Marca / Modelo</dt><dd>${escapeHtml(safeStr(o.marca))} ${escapeHtml(safeStr(o.modelo))}</dd><dt>IMEI / Série</dt><dd>${escapeHtml(safeStr(o.imei))||'—'}</dd><dt>Acessórios</dt><dd>${escapeHtml(safeStr(o.acessorios))||'—'}</dd></dl>
+  <div class="section-title">Serviço</div><dl class="kv"><dt>Defeito relatado</dt><dd>${escapeHtml(safeStr(o.defeito))}</dd><dt>Técnico</dt><dd>${escapeHtml(safeStr(o.tecnico))||'—'}</dd><dt>Previsão</dt><dd>${fmtPrevisao(o.previsao)}</dd><dt>Valor</dt><dd>${o.valor?'R$ '+Number(o.valor).toFixed(2):'—'}</dd><dt>Garantia</dt><dd>${safeStr(o.garantia)||'90'} dias</dd></dl>
+  <div class="section-title">Diagnóstico técnico (usado no laudo)</div><div class="form-grid full"><div class="field"><textarea id="diagnostico" placeholder="Diagnóstico técnico do defeito">${escapeHtml(safeStr(o.diagnostico))}</textarea></div><div class="field"><label>Serviço realizado</label><textarea id="servicoRealizado" placeholder="O que foi feito no aparelho">${escapeHtml(safeStr(o.servicoRealizado))}</textarea></div><div class="field"><label>Peças utilizadas</label><textarea id="pecasUtilizadas" placeholder="Peças / componentes trocados">${escapeHtml(safeStr(o.pecasUtilizadas))}</textarea></div></div><div style="display:flex;justify-content:flex-end;margin-top:10px;"><button class="btn btn-sm btn-primary" data-savetech="${escapeHtml(safeStr(o.id))}">Salvar diagnóstico</button></div></div></div>
   <div style="display:flex;flex-direction:column;gap:16px;"><div class="card pad"><div class="section-title" style="margin-top:0;">Alterar status</div><div class="status-actions">${statusBtns}</div></div>${notifyBlock}<div class="card pad"><div class="section-title" style="margin-top:0;">Histórico</div><ul class="timeline">${tl}</ul></div></div></div>`;
 }
 async function setStatus(id,status){
-  const o=STATE.ordens.find(x=>x.id===id); if(!o) return; o.status=status; o.historico.push({status,em:new Date().toISOString()}); if(status==='Entregue') o.entregueEm=new Date().toISOString(); await saveOrdens(); showToast(`Status atualizado para "${status}".`); render();
+  const o=STATE.ordens.find(x=>x && x.id===id); if(!o) return; o.status=status; if(!Array.isArray(o.historico)) o.historico=[]; o.historico.push({status,em:new Date().toISOString()}); if(status==='Entregue') o.entregueEm=new Date().toISOString(); await saveOrdens(); showToast(`Status atualizado para "${status}".`); render();
 }
 async function saveTech(id){
-  const o=STATE.ordens.find(x=>x.id===id); if(!o) return; o.diagnostico=document.getElementById('diagnostico').value; o.servicoRealizado=document.getElementById('servicoRealizado').value; o.pecasUtilizadas=document.getElementById('pecasUtilizadas').value; await saveOrdens(); showToast('Diagnóstico salvo.');
+  const o=STATE.ordens.find(x=>x && x.id===id); if(!o) return; o.diagnostico=document.getElementById('diagnostico').value; o.servicoRealizado=document.getElementById('servicoRealizado').value; o.pecasUtilizadas=document.getElementById('pecasUtilizadas').value; await saveOrdens(); showToast('Diagnóstico salvo.');
 }
 
 /* ============== GERENTES ============== */
 function viewGerentes(){
-  const cards=FILIAIS.map(f=>{ const g=STATE.gerentes[f]||{nome:'',telefone:''}; return `<div class="manager-card"><div class="fname">${f} ${isTcase(f)?'<span class="tag-tcase">TCASE</span>':''}</div><div class="field" style="margin-bottom:8px;"><label>Nome do gerente</label><input data-gnome="${f}" value="${escapeHtml(g.nome)}" placeholder="Nome"></div><div class="field" style="margin-bottom:10px;"><label>WhatsApp (com DDD)</label><input data-gfone="${f}" value="${escapeHtml(g.telefone)}" placeholder="(00) 00000-0000" maxlength="15"></div><button class="btn btn-sm btn-primary" data-savegerente="${f}">Salvar contato</button></div>`; }).join('');
+  const cards=FILIAIS.map(f=>{ const g=STATE.gerentes[f]||{nome:'',telefone:''}; return `<div class="manager-card"><div class="fname">${f} ${isTcase(f)?'<span class="tag-tcase">TCASE</span>':''}</div><div class="field" style="margin-bottom:8px;"><label>Nome do gerente</label><input data-gnome="${f}" value="${escapeHtml(safeStr(g.nome))}" placeholder="Nome"></div><div class="field" style="margin-bottom:10px;"><label>WhatsApp (com DDD)</label><input data-gfone="${f}" value="${escapeHtml(safeStr(g.telefone))}" placeholder="(00) 00000-0000" maxlength="15"></div><button class="btn btn-sm btn-primary" data-savegerente="${f}">Salvar contato</button></div>`; }).join('');
   return `<div class="topbar"><div><h1>Gerentes das filiais</h1><p>Cadastre o contato usado para os avisos de "pronto para retirada"</p></div></div><div class="manager-grid">${cards}</div>`;
 }
 async function saveGerente(filial){
@@ -240,18 +252,18 @@ async function saveGerente(filial){
 
 /* ============== LAUDO ============== */
 function openLaudo(id){
-  const o=STATE.ordens.find(x=>x.id===id); if(!o) return; const tcase=isTcase(o.filial);
+  const o=STATE.ordens.find(x=>x && x.id===id); if(!o) return; const tcase=isTcase(o.filial);
   const logoBlock=tcase?`<div style="font-family:'Space Grotesk';font-weight:800;font-size:26px;">TCASE</div>`:`<div class="lh-mob"><span class="mob">MOB</span>CELL</div>`;
-  const html=`<div class="laudo-page"><div class="laudo-head">${logoBlock}<div class="laudo-title"><h2>Laudo Técnico</h2><span>Ordem de Serviço</span><br><span class="laudo-num">${o.numero}</span></div></div>
-  <div class="laudo-section"><h4>Dados da filial e do cliente</h4><div class="laudo-kv"><div><span>Filial</span><b>${escapeHtml(o.filial)}</b></div><div><span>Data de abertura</span><b>${fmtDate(o.criadaEm)}</b></div><div><span>Cliente</span><b>${escapeHtml(o.clienteNome)}</b></div><div><span>CPF</span><b>${escapeHtml(o.cpf)}</b></div><div><span>Telefone</span><b>${escapeHtml(o.telefone)}</b></div><div><span>E-mail</span><b>${escapeHtml(o.email)||'—'}</b></div></div></div>
-  <div class="laudo-section"><h4>Produto</h4><div class="laudo-kv"><div><span>Tipo</span><b>${escapeHtml(o.tipoProduto)}</b></div><div><span>Marca / Modelo</span><b>${escapeHtml(o.marca)} ${escapeHtml(o.modelo)}</b></div><div><span>IMEI / Série</span><b>${escapeHtml(o.imei)||'—'}</b></div><div><span>Acessórios</span><b>${escapeHtml(o.acessorios)||'—'}</b></div></div></div>
-  <div class="laudo-section"><h4>Defeito relatado pelo cliente</h4><div class="laudo-block">${escapeHtml(o.defeito)||'—'}</div></div>
-  <div class="laudo-section"><h4>Diagnóstico técnico</h4><div class="laudo-block">${escapeHtml(o.diagnostico)||'—'}</div></div>
-  <div class="laudo-section"><h4>Serviço realizado</h4><div class="laudo-block">${escapeHtml(o.servicoRealizado)||'—'}</div></div>
-  <div class="laudo-section"><h4>Peças utilizadas</h4><div class="laudo-block">${escapeHtml(o.pecasUtilizadas)||'Nenhuma'}</div></div>
-  <div class="laudo-section"><div class="laudo-kv"><div><span>Técnico responsável</span><b>${escapeHtml(o.tecnico)||'—'}</b></div><div><span>Valor do serviço</span><b>${o.valor?'R$ '+Number(o.valor).toFixed(2):'—'}</b></div><div><span>Garantia</span><b>${o.garantia||'90'} dias a partir da entrega</b></div><div><span>Status atual</span><b>${o.status}</b></div></div></div>
+  const html=`<div class="laudo-page"><div class="laudo-head">${logoBlock}<div class="laudo-title"><h2>Laudo Técnico</h2><span>Ordem de Serviço</span><br><span class="laudo-num">${escapeHtml(safeStr(o.numero))}</span></div></div>
+  <div class="laudo-section"><h4>Dados da filial e do cliente</h4><div class="laudo-kv"><div><span>Filial</span><b>${escapeHtml(safeStr(o.filial))}</b></div><div><span>Data de abertura</span><b>${fmtDate(o.criadaEm)}</b></div><div><span>Cliente</span><b>${escapeHtml(safeStr(o.clienteNome))}</b></div><div><span>CPF</span><b>${escapeHtml(safeStr(o.cpf))}</b></div><div><span>Telefone</span><b>${escapeHtml(safeStr(o.telefone))}</b></div><div><span>E-mail</span><b>${escapeHtml(safeStr(o.email))||'—'}</b></div></div></div>
+  <div class="laudo-section"><h4>Produto</h4><div class="laudo-kv"><div><span>Tipo</span><b>${escapeHtml(safeStr(o.tipoProduto))}</b></div><div><span>Marca / Modelo</span><b>${escapeHtml(safeStr(o.marca))} ${escapeHtml(safeStr(o.modelo))}</b></div><div><span>IMEI / Série</span><b>${escapeHtml(safeStr(o.imei))||'—'}</b></div><div><span>Acessórios</span><b>${escapeHtml(safeStr(o.acessorios))||'—'}</b></div></div></div>
+  <div class="laudo-section"><h4>Defeito relatado pelo cliente</h4><div class="laudo-block">${escapeHtml(safeStr(o.defeito))||'—'}</div></div>
+  <div class="laudo-section"><h4>Diagnóstico técnico</h4><div class="laudo-block">${escapeHtml(safeStr(o.diagnostico))||'—'}</div></div>
+  <div class="laudo-section"><h4>Serviço realizado</h4><div class="laudo-block">${escapeHtml(safeStr(o.servicoRealizado))||'—'}</div></div>
+  <div class="laudo-section"><h4>Peças utilizadas</h4><div class="laudo-block">${escapeHtml(safeStr(o.pecasUtilizadas))||'Nenhuma'}</div></div>
+  <div class="laudo-section"><div class="laudo-kv"><div><span>Técnico responsável</span><b>${escapeHtml(safeStr(o.tecnico))||'—'}</b></div><div><span>Valor do serviço</span><b>${o.valor?'R$ '+Number(o.valor).toFixed(2):'—'}</b></div><div><span>Garantia</span><b>${safeStr(o.garantia)||'90'} dias a partir da entrega</b></div><div><span>Status atual</span><b>${escapeHtml(safeStr(o.status))}</b></div></div></div>
   <div class="laudo-sign"><div>Assinatura do técnico</div><div>Assinatura do cliente</div></div>
-  <div class="laudo-foot">${tcase?'Tcase':'Mobcell'} · ${escapeHtml(o.filial)} · Documento gerado em ${fmtDate(new Date().toISOString())}</div></div>`;
+  <div class="laudo-foot">${tcase?'Tcase':'Mobcell'} · ${escapeHtml(safeStr(o.filial))} · Documento gerado em ${fmtDate(new Date().toISOString())}</div></div>`;
   document.getElementById('laudoView').innerHTML=html; window.print();
 }
 
@@ -263,10 +275,11 @@ function attachHandlers(){
   document.querySelectorAll('[data-savetech]').forEach(b=>b.onclick=()=>saveTech(b.dataset.savetech));
   document.querySelectorAll('[data-savegerente]').forEach(b=>b.onclick=()=>saveGerente(b.dataset.savegerente));
   document.querySelectorAll('[data-laudo]').forEach(b=>b.onclick=()=>openLaudo(b.dataset.laudo));
-  const form=document.getElementById('formNovaOS'); if(form){form.onsubmit=handleNovaOSSubmit; const cpfEl=form.querySelector('[name=cpf]'); if(cpfEl) cpfEl.oninput=e=>e.target.value=fmtCPF(e.target.value); const telEl=form.querySelector('[name=telefone]'); if(telEl) telEl.oninput=e=>e.target.value=fmtPhone(e.target.value);}
-  const fq=document.getElementById('fq'); if(fq){ fq.oninput=e=>{dashFilters.q=e.target.value;}; fq.onblur=()=>render(); }
-  const fFilial=document.getElementById('fFilial'); if(fFilial) fFilial.onchange=e=>{dashFilters.filial=e.target.value; render();};
-  const fStatus=document.getElementById('fStatus'); if(fStatus) fStatus.onchange=e=>{dashFilters.status=e.target.value; render();};
+  const form=document.getElementById('formNovaOS'); if(form){form.onsubmit=handleNovaOSSubmit; form.querySelector('[name=cpf]').oninput=e=>e.target.value=fmtCPF(e.target.value); form.querySelector('[name=telefone]').oninput=e=>e.target.value=fmtPhone(e.target.value);}
+  const fq=document.getElementById('fq'); if(fq){ fq.oninput=e=>{dashFilters.q=e.target.value;}; }
+  const btnBuscar=document.getElementById('btnBuscarDash'); if(btnBuscar){ btnBuscar.onclick=()=>render(); }
+  const ff=document.getElementById('fFilial'); if(ff) ff.onchange=e=>{dashFilters.filial=e.target.value; render();};
+  const fs=document.getElementById('fStatus'); if(fs) fs.onchange=e=>{dashFilters.status=e.target.value; render();};
   document.querySelectorAll('[data-gfone]').forEach(inp=>inp.oninput=e=>e.target.value=fmtPhone(e.target.value));
 }
 
