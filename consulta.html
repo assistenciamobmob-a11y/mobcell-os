@@ -63,7 +63,7 @@ async function buscar(){
       res.innerHTML = '<div class="empty">Nenhuma ordem encontrada para este CPF.</div>';
     } else {
       res.innerHTML = encontradas.map(o => {
-        const prev = o.previsao ? new Date(o.previsao+'T00:00').toLocaleDateString('pt-BR') : '—';
+        const prev = o.previsao ? new Date(o.previsao).toLocaleDateString('pt-BR') : '—';
         return `<div class="os-card">
           <h3>${o.numero}</h3>
           <span class="status ${STATUS_MAP[o.status]||''}">${o.status}</span>
