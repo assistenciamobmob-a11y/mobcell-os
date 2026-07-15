@@ -264,7 +264,7 @@ function attachHandlers(){
   document.querySelectorAll('[data-savegerente]').forEach(b=>b.onclick=()=>saveGerente(b.dataset.savegerente));
   document.querySelectorAll('[data-laudo]').forEach(b=>b.onclick=()=>openLaudo(b.dataset.laudo));
   const form=document.getElementById('formNovaOS'); if(form){form.onsubmit=handleNovaOSSubmit; const cpfEl=form.querySelector('[name=cpf]'); if(cpfEl) cpfEl.oninput=e=>e.target.value=fmtCPF(e.target.value); const telEl=form.querySelector('[name=telefone]'); if(telEl) telEl.oninput=e=>e.target.value=fmtPhone(e.target.value);}
-  const fq=document.getElementById('fq'); if(fq) fq.oninput=e=>{dashFilters.q=e.target.value; render(); document.getElementById('fq').focus(); document.getElementById('fq').selectionStart=document.getElementById('fq').value.length;};
+  const fq=document.getElementById('fq'); if(fq){ fq.oninput=e=>{dashFilters.q=e.target.value;}; fq.onblur=()=>render(); }
   const fFilial=document.getElementById('fFilial'); if(fFilial) fFilial.onchange=e=>{dashFilters.filial=e.target.value; render();};
   const fStatus=document.getElementById('fStatus'); if(fStatus) fStatus.onchange=e=>{dashFilters.status=e.target.value; render();};
   document.querySelectorAll('[data-gfone]').forEach(inp=>inp.oninput=e=>e.target.value=fmtPhone(e.target.value));
