@@ -39,7 +39,7 @@
 
 <script>
 // ⬇️ COLE AQUI A MESMA URL DO APPS SCRIPT
-const API_URL = 'https://script.google.com/macros/s/AKfycbzJJCVjpB1p_BU33z-yz7j4WzA81_qhOq_TmuauBZVF6GE5dKo3KOqWgmbajDX6pXU4/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbztdV-jQP_lX5GC0MoY4YaSKR37IDX2XVHYeL1GxBdikbsrJdG2xNkO24C04dr5KRo/exec';
 
 function fmtCPF(v){ v=v.replace(/\D/g,'').slice(0,11); return v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); }
 document.getElementById('cpf').addEventListener('input', e=> e.target.value = fmtCPF(e.target.value));
