@@ -38,7 +38,7 @@
   td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:middle;} tr:last-child td{border-bottom:none;} tr.row-click{cursor:pointer;} tr.row-click:hover{background:#FAFBFB;}
   .mono{font-family:'Space Grotesk';font-weight:600;} .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;font-size:11.5px;font-weight:700;}
   .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
-  .b-aberta{background:#EDEEF6;color:#5A5FBB;} .b-andamento{background:#FFF3E0;color:#B8791E;} .b-pecas{background:#FDEAEA;color:#C34C4C;} .b-pronto{background:var(--teal-light);color:var(--teal-dark);} .b-entregue{background:#EAF6EE;color:#2E9D5E;}
+  .b-aberta{background:#EDEEF6;color:#5A5FBB;} .b-andamento{background:#FFF3E0;color:#B8791E;} .b-pecas{background:#FDEAEA;color:#C34C4C;} .b-pronto{background:var(--teal-light);color:var(--teal-dark);} .b-troca{background:#E8E0F7;color:#6B4C9A;}
   .empty{padding:60px 20px;text-align:center;color:var(--ink-soft);} .empty svg{opacity:.35;margin-bottom:10px;}
   .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;} .form-grid.full{grid-template-columns:1fr;}
   .field{display:flex;flex-direction:column;gap:6px;} .field.span2{grid-column:span 2;}
@@ -117,8 +117,8 @@ const SENHA_ADMIN = 'mobmob123';
 
 /* ============== DADOS ============== */
 const FILIAIS = ["Araruama","Bacaxá","Bacaxá Praça","Cabo Frio","Maricá","São Pedro","Rio Das Ostras","Unamar","Campos Centro","Campos Shopping","Tcase Pelinca","Tcase Boulevard"];
-const STATUSES = ["Aberta","Em Andamento","Aguardando Peça","Pronto para Retirada","Entregue"];
-const STATUS_CLASS = {"Aberta":"b-aberta","Em Andamento":"b-andamento","Aguardando Peça":"b-pecas","Pronto para Retirada":"b-pronto","Entregue":"b-entregue"};
+const STATUSES = ["Aberta","Em Andamento","Aguardando Peça","Pronto para Retirada","Troca Autorizada","Entregue"];
+const STATUS_CLASS = {"Aberta":"b-aberta","Em Andamento":"b-andamento","Aguardando Peça":"b-pecas","Pronto para Retirada":"b-pronto","Troca Autorizada":"b-troca","Entregue":"b-entregue"};
 const isTcase = f => f && f.startsWith("Tcase");
 
 let STATE = { ordens:[], gerentes:{} };
@@ -223,7 +223,17 @@ function viewDetalhe(id){
   const statusBtns=STATUSES.map(s=>`<button class="btn btn-sm ${s===o.status?'btn-dark':'btn-ghost'}" data-setstatus="${s}" ${s===o.status?'disabled':''}>${s}</button>`).join('');
   let notifyBlock='';
   if(o.status==='Pronto para Retirada'){
-    if(gerente.telefone){ const msg=encodeURIComponent(`Olá ${safeStr(gerente.nome)}, a OS ${safeStr(o.numero)} (${safeStr(o.clienteNome)} - ${safeStr(o.marca)} ${safeStr(o.modelo)}) está PRONTA para retirada na filial ${safeStr(o.filial)}.`); const wa=`https://wa.me/55${safeStr(gerente.telefone).replace(/\D/g,'')}?text=${msg}`; notifyBlock=`<div class="callout"><h4>Aparelho pronto — avisar gerente</h4><p style="margin:0 0 10px;">Gerente da filial: <b>${escapeHtml(safeStr(gerente.nome))}</b> · ${fmtPhone(safeStr(gerente.telefone))}</p><a class="btn btn-primary btn-sm" href="${wa}" target="_blank" rel="noopener" style="text-decoration:none;">Avisar via WhatsApp</a></div>`; }
+    if(gerente.telefone){ const msg=encodeURIComponent(`Olá ${safeStr(gerente.nome)}, tudo bem?
+
+A OS ${safeStr(o.numero)} está com status: ${safeStr(o.status)}.
+
+📋 Cliente: ${safeStr(o.clienteNome)}
+📱 Produto: ${safeStr(o.marca)} ${safeStr(o.modelo)}
+🏪 Filial: ${safeStr(o.filial)}
+
+Por favor, entre em contato com o cliente para informar.
+
+Att., Mobcell`); const wa=`https://wa.me/55${safeStr(gerente.telefone).replace(/\D/g,'')}?text=${msg}`; notifyBlock=`<div class="callout"><h4>Aparelho pronto — avisar gerente</h4><p style="margin:0 0 10px;">Gerente da filial: <b>${escapeHtml(safeStr(gerente.nome))}</b> · ${fmtPhone(safeStr(gerente.telefone))}</p><a class="btn btn-primary btn-sm" href="${wa}" target="_blank" rel="noopener" style="text-decoration:none;">Avisar via WhatsApp</a></div>`; }
     else { notifyBlock=`<div class="callout warn"><h4>Nenhum gerente cadastrado para ${escapeHtml(safeStr(o.filial))}</h4><p style="margin:0 0 10px;">Cadastre o contato do gerente para poder enviar o aviso de "pronto".</p><button class="btn btn-sm btn-ghost" data-nav="gerentes">Cadastrar gerente</button></div>`; }
   }
   return `<div class="topbar"><div><h1 class="mono">${escapeHtml(safeStr(o.numero))}</h1><p>${escapeHtml(safeStr(o.filial))} · Aberta em ${fmtDate(o.criadaEm)}</p></div><div style="display:flex;gap:10px;"><button class="btn btn-ghost" data-nav="dashboard">← Voltar</button><button class="btn btn-dark" data-laudo="${escapeHtml(safeStr(o.id))}">Emitir laudo</button></div></div>
